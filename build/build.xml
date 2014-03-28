@@ -1,0 +1,433 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="deepsea 1.1 API" default="build" phingVersion="2.4.11">
+    <taskdef name="jshint" classname="JSHintTask" />
+    <taskdef name="csslint" classname="CSSLintTask" />
+    <taskdef name="phpunitlaravel" classname="PHPUnitSimpleTask" />
+
+    <target name="build" depends="init,
+                                  clean,
+                                  verify,
+                                  analyze" />
+
+    <target name="verify" depends="init,
+                                   clean,
+                                   lint-php" />
+
+    <target name="analyze" depends="init,
+                                    clean,
+                                    phpunit,
+                                    jshint,
+                                    csslint,
+                                    phploc,
+                                    phpcs,
+                                    phpmd,
+                                    phpcpd" />
+
+    <target name="lint-php"
+            description="Check all PHP files for syntax error using phplint"
+            depends="init">
+        <phplint haltonfailure="true">
+            <fileset refid="src.php" />
+        </phplint>
+    </target>
+
+    <target name="jshint"
+            description="Check js file against jshint"
+            depends="list-js-byline">
+        <jshint source="${project.logdir}/${jslist.outfilebyline}" output="${project.logdir}/${jshint.outfile}" />
+    </target>
+
+    <target name="csslint"
+            description="Check css file agains csslint"
+            depends="list-css-byline">
+        <csslint source="${project.logdir}/${csslist.outfilebyline}" output="${project.logdir}/${csslint.outfile}" />
+    </target>
+
+    <target name="phpunit"
+            description="Running the code against phpunit-phing"
+            depends="list-php-byline">
+        <phpunitlaravel phpunit="${project.logdir}/${phpunit.config}" template="${project.laraveldir}/${phpunit.config}" phplist="${project.logdir}/${phplist.outfilebyline}" junitlog="${project.logdir}/${phpunit.junitout}" cloverlog="${project.logdir}/${phpunit.cloverout}" />
+    </target>
+
+    <target name="phpunit-cli" depends="init">
+        <phpunitlaravel phpunit="${project.logdir}/${phpunit.config}" template="${project.laraveldir}/${phpunit.config}" phplist="${project.logdir}/${phplist.outfilebyline}" junitlog="${project.logdir}/${phpunit.junitout}" cloverlog="${project.logdir}/${phpunit.cloverout}" />
+    </target>
+
+
+<!-- ### Detect code mess
+
+Uses [PHPMD](http://phpmd.org/) to detect code mess and look for potential problems -->
+    <target name="phpmd"
+            description="Generate pmd.xml using PHPMD"
+            depends="init">
+        <phpmd rulesets="codesize,naming,design">
+            <fileset refid="src.php" />
+            <formatter type="xml" outfile="${project.logdir}/${pmd.outfile}" />
+        </phpmd>
+    </target>
+
+
+<!-- ### Detect potential copy/pasting
+
+Uses [phpcpd](https://github.com/sebastianbergmann/phpcpd) to detect duplicate code. This indicates potential refactoring. -->
+    <target name="phpcpd"
+            description="Generate pmd-cpd.xml using phpcpd"
+            depends="init">
+        <phpcpd>
+            <fileset refid="src.php" />
+            <formatter type="pmd" outfile="${project.logdir}/${cpd.outfile}" />
+        </phpcpd>
+    </target>
+
+
+<!-- ### Generate code statistics
+Measures the size of the project using [phploc](https://github.com/sebastianbergmann/phploc/) and generates statistics. -->
+    <target name="phploc"
+            description="Generate phploc.csv using phploc"
+            depends="init">
+        <phploc reportType="${loc.type}"
+                reportName="${loc.outfile}" reportDirectory="${project.logdir}"
+                suffixes="php" countTests="true">
+            <fileset refid="src.php" />
+        </phploc>
+    </target>
+
+
+<!-- ### Review code using PHP_CodeSniffer -->
+    <target name="phpcs"
+            description="Generate checkstyle.xml using PHP_CodeSniffer"
+            depends="init">
+        <phpcodesniffer standard="${phpcs.standard}"
+                        showSniffs="true"
+                        showWarnings="true">
+            <fileset refid="src.php" />
+            <formatter type="${phpcs.format}" outfile="${project.logdir}/${phpcs.outfile}" />
+        </phpcodesniffer>
+    </target>
+
+
+<!-- ### Debug code detection
+Code should not call funtions which are usually used for debugging
+This belongs on developer env - not VCS. This goes for mentioning them in comments as well. -->
+    <target name="check-php-debug"
+            description="Check PHP code for debug statements"
+            depends="init">
+        <phingcall target="check-debug">
+            <property name="debug.language" value="PHP" override="true" />
+            <property name="debug.pattern" value="(var_dump\(|dsm\(|dpm\()" override="true" />
+            <property name="debug.fileset" value="src.php" />
+        </phingcall>
+    </target>
+
+    <target name="check-js-debug"
+            description="Check Javascript code for debug statements">
+        <phingcall target="check-debug">
+            <property name="debug.language" value="Javascript" override="true" />
+            <property name="debug.pattern" value="(console\.log\()" override="true" />
+            <property name="debug.fileset" value="src.js" />
+        </phingcall>
+    </target>
+
+    <!-- ### Check a fileset for debug code -->
+    <target name="check-debug"
+            depends="init">
+        <php function="strtolower" returnProperty="debug.language.lower">
+            <param value="${debug.language}" />
+        </php>
+        <property name="debug.output"
+                  value="${project.logdir}/debug_${debug.language.lower}.txt"
+                  override="true" />
+        <delete file="${debug.output}" />
+        <append text="" destFile="${debug.output}" />
+
+        <foreach target="check-debug-file" param="filename" absparam="absfilename">
+            <fileset refid="${debug.fileset}" />
+        </foreach>
+        <!-- Break if debug code is detected -->
+        <if>
+            <not>
+                <equals arg1="${debug.lines}" arg2="${debug.lines}" />
+            </not>
+            <then>
+                <fail message="${debug.language} debug code detected:${line.separator} ${debug.lines}" />
+            </then>
+        </if>
+    </target>
+
+    <target name="check-debug-file">
+        <echo>Checking file for debug statements: ${absfilename}</echo>
+        <loadfile property="debug.lines" file="${absfilename}">
+            <filterchain>
+                <linecontainsregexp>
+                    <regexp pattern="${debug.pattern}" />
+                </linecontainsregexp>
+            </filterchain>
+        </loadfile>
+        <if>
+            <not>
+                <equals arg1="${debug.lines}" arg2="" />
+            </not>
+            <then>
+                <append text="${filename}:${line.separator}
+                              ${debug.lines}${line.separator}
+                              ${line.separator}"
+                        destFile="${debug.output}" />
+            </then>
+        </if>
+    </target>
+
+
+<!-- List individual lines inside fileset -->
+    <target name="list-php" depends="init">
+        <property name="fileset-dump-file" value="${project.logdir}/${phplist.outfile}" override="true" />
+        <delete file="${fileset-dump-file}" />
+         <foreach target="write-to-file" param="filename" absparam="absfilename">
+            <fileset refid="src.php" />
+        </foreach>
+    </target>
+
+    <target name="list-php-byline" depends="init">
+        <property name="fileset-dump-file" value="${project.logdir}/${phplist.outfilebyline}" override="true" />
+        <delete file="${fileset-dump-file}" />
+         <foreach target="write-to-file-byline" param="filename" absparam="absfilename">
+            <fileset refid="src.php" />
+        </foreach>
+    </target>
+
+    <target name="list-js" depends="init">
+        <property name="fileset-dump-file" value="${project.logdir}/${jslist.outfile}" override="true" />
+        <delete file="${fileset-dump-file}" />
+        <foreach target="write-to-file" param="filename" absparam="absfilename">
+            <fileset refid="src.js" />
+        </foreach>
+    </target>
+
+    <target name="list-js-byline" depends="init">
+        <property name="fileset-dump-file" value="${project.logdir}/${jslist.outfilebyline}" override="true" />
+        <delete file="${fileset-dump-file}" />
+        <foreach target="write-to-file-byline" param="filename" absparam="absfilename">
+            <fileset refid="src.js" />
+        </foreach>
+    </target>
+
+    <target name="list-css" depends="init">
+        <property name="fileset-dump-file" value="${project.logdir}/${csslist.outfile}" override="true" />
+        <delete file="${fileset-dump-file}" />
+        <foreach target="write-to-file" param="filename" absparam="absfilename">
+            <fileset refid="src.css" />
+        </foreach>
+    </target>
+
+    <target name="list-css-byline" depends="init">
+        <property name="fileset-dump-file" value="${project.logdir}/${csslist.outfilebyline}" override="true" />
+        <delete file="${fileset-dump-file}" />
+        <foreach target="write-to-file-byline" param="filename" absparam="absfilename">
+            <fileset refid="src.css" />
+        </foreach>
+    </target>
+
+    <target name="write-to-file">
+        <echo file="${fileset-dump-file}" append="true">"${absfilename}" </echo>
+    </target>
+    
+    <target name="write-to-file-byline">
+        <echo file="${fileset-dump-file}" append="true">${absfilename}${line.separator}</echo>
+    </target>
+
+
+<!-- ### Generate a code browser
+Generate a code browser for PHP files with syntax highlighting and colored error-sections using
+[PHP_CodeBrowser](https://github.com/Mayflower/PHP_CodeBrowser). -->
+    <target name="phpcb"
+            description="Aggregate tool output with PHP_CodeBrowser"
+            depends="init">
+        <mkdir dir="${project.builddir}/code-browser" />
+        <exec command="phpcb --log ${project.logdir}
+                             --source ${project.basedir}
+                             --output ${project.builddir}/code-browser"
+              logoutput="true" />
+    </target>
+
+
+<!-- ### Generate documentation
+Uses [phpDocumentor](http://www.phpdoc.org/) to generate documentation -->
+    <target name="phpdoc"
+            description="Generate API documentation using phpDocumentor">
+        <mkdir dir="${project.builddir}/api" />
+        <phpdoc title="API Documentation"
+                destdir="${project.builddir}/api"
+                sourcecode="php"
+                output="HTML:Smarty:PHP">
+            <fileset refid="src.php" />
+        </phpdoc>
+    </target>
+
+
+<!-- ### Internal setup -->
+    <target name="init"
+            depends="load-properties, setup-dirs, setup-filesets"
+            unless="project.initialized">
+        <echo msg="call init!" />
+        <property name="project.initialized" value="true" />
+    </target>
+
+<!-- ### Load properties file -->
+    <target name="load-properties">
+        <php function="dirname" returnProperty="phing.dir">
+            <param value="${phing.file}" />
+        </php>
+
+        <property name="project.basedir" value="${phing.dir}" />
+
+        <if>
+          <or>
+            <not><istrue value="${project.properties.loaded}" /></not>
+            <not><isset property="project.properties.loaded" /></not>
+          </or>
+          <then>
+            <echo msg="project.properties has not loaded" />
+            <if>
+                <available file="${project.basedir}/../build.properties" />
+                <then>
+                    <resolvepath propertyName="project.basedir"
+                                 file="${project.basedir}/../" />
+                </then>
+            </if>
+
+            <property name="project.properties.file"
+                      value="${phing.dir}/build.default.properties" />
+            
+            <property file="${project.properties.file}" override="true" />
+
+            <available file="${phing.dir}/build.properties"
+                       property="project.properties.file"
+                       value="${phing.dir}/build.properties" />
+            
+            <available file="${project.basedir}/build.properties"
+                       property="project.properties.file"
+                       value="${project.basedir}/build.properties" />
+
+            <property file="${project.properties.file}" override="true"
+ />
+            <property name="project.properties.loaded" value="true" />
+          </then>
+        </if>
+    </target>
+
+
+<!-- ### Setup template directories -->
+    <target name="setup-dirs" depends="load-properties">
+        <if>
+          <isset property="laravel.make.dir" />
+          <then>
+            <property name="project.laraveldir"
+                      value="${project.basedir}/${laravel.make.dir}" />
+          </then>
+          <else>
+            <property name="project.laraveldir"
+                      value="${project.basedir}" />
+          </else>
+        </if>
+
+        <property name="project.builddir"
+                  value="${project.basedir}/build" />
+        <property name="project.logdir"
+                  value="${project.builddir}/logs" />
+    </target>
+
+
+<!-- ### Delete and create artifact directories -->
+    <target name="clean"
+            description="Clean up and create artifact directories"
+            depends="setup-dirs"
+            unless="project.cleaned">
+        
+        <!-- Delete and recreate directories for artifacts -->
+        <delete dir="${project.logdir}" />
+        <mkdir dir="${project.logdir}" />
+
+        <!-- Set property to prevent target from being executed multiple times -->
+        <property name="project.cleaned" value="true" />
+    </target>
+
+<!-- ### Fileset definition -->
+    <target name="setup-filesets"
+            depends="load-properties">
+        
+        <!-- PHP files -->
+        <patternset id="php">
+            <include name="**/*.php" />
+        </patternset>
+
+        <patternset id="laravel-files">
+            <exclude name="**/_ide_helper.php" />
+            <exclude name="server.php" />
+            <exclude name="app/config/" />
+            <exclude name="app/routes.php" />
+            <exclude name="app/filters.php" />
+            <exclude name="app/start/" />
+        </patternset>
+
+        <!-- Javascript files -->
+        <patternset id="js">
+            <include name="**/*.js" />
+            <exclude name="**/*.min.js" />
+        </patternset>
+
+        <!-- CSS files -->
+        <patternset id="css">
+            <include name="**/*.css" />
+            <exclude name="**/*.min.css" />
+        </patternset>
+ 
+        <patternset id="vendor">
+            <exclude name="**/vendor/**/*.*" />
+        </patternset>
+
+        <patternset id="bootstrap">
+            <exclude name="**/bootstrap/**/*.*" />
+        </patternset>
+
+        <patternset id="node-modules">
+            <exclude name="**/node_modules/**/*.*" />
+        </patternset>
+
+        <patternset id="build-dir">
+            <exclude name="**/build/**/*.*" />
+        </patternset>
+
+        <patternset id="bootstrap-css">
+            <exclude name="**/bootstrap*.css" />
+        </patternset>
+
+        <patternset id="bootstrap-js">
+            <exclude name="**/bootstrap*.js" />
+        </patternset>
+
+        
+        <fileset id="src.php" dir="${project.laraveldir}">
+            <patternset refid="php" />
+            <patternset refid="vendor" />
+            <patternset refid="bootstrap" />
+            <patternset refid="laravel-files" />
+            <patternset refid="build-dir" />
+        </fileset>
+
+        <fileset id="src.js" dir="${project.laraveldir}">
+            <patternset refid="js" />
+            <patternset refid="vendor" />
+            <patternset refid="bootstrap" />
+            <patternset refid="node-modules" />
+            <patternset refid="build-dir" />
+            <patternset refid="bootstrap-js" />
+        </fileset>
+
+        <fileset id="src.css" dir="${project.laraveldir}">
+            <patternset refid="css" />
+            <patternset refid="build-dir" />
+            <patternset refid="vendor" />
+            <patternset refid="bootstrap" />
+            <patternset refid="bootstrap-css" />
+        </fileset>
+    </target>
+</project>
