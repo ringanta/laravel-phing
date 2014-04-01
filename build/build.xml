@@ -45,8 +45,8 @@
 
     <target name="phpunit"
             description="Running the code against phpunit-phing"
-            depends="list-php-byline">
-        <phpunitlaravel phpunit="${project.logdir}/${phpunit.config}" template="${project.laraveldir}/${phpunit.config}" phplist="${project.logdir}/${phplist.outfilebyline}" junitlog="${project.logdir}/${phpunit.junitout}" cloverlog="${project.logdir}/${phpunit.cloverout}" />
+            depends="list-php-byline, list-laravel-model-byline">
+        <phpunitlaravel phpunit="${project.logdir}/${phpunit.config}" template="${project.laraveldir}/${phpunit.config}" phplist="${project.logdir}/${phplist.laravelmodeloutbyline}" junitlog="${project.logdir}/${phpunit.junitout}" cloverlog="${project.logdir}/${phpunit.cloverout}" />
     </target>
 
     <target name="phpunit-cli" depends="init">
@@ -191,6 +191,14 @@ This belongs on developer env - not VCS. This goes for mentioning them in commen
         <delete file="${fileset-dump-file}" />
          <foreach target="write-to-file-byline" param="filename" absparam="absfilename">
             <fileset refid="src.php" />
+        </foreach>
+    </target>
+    
+    <target name="list-laravel-model-byline" depends="init">
+        <property name="fileset-dump-file" value="${project.logdir}/${phplist.laravelmodeloutbyline}" override="true" />
+        <delete file="${fileset-dump-file}" />
+        <foreach target="write-to-file-byline" param="filename" absparam="absfilename">
+            <fileset refid="laravel.model.php" />
         </foreach>
     </target>
 
@@ -411,6 +419,12 @@ Uses [phpDocumentor](http://www.phpdoc.org/) to generate documentation -->
             <patternset refid="bootstrap" />
             <patternset refid="laravel-files" />
             <patternset refid="build-dir" />
+        </fileset>
+        
+        <fileset id="laravel.model.php" dir="${project.laraveldir}">
+            <patternset>
+                <include name="app/models/*.php" />
+            </patternset>
         </fileset>
 
         <fileset id="src.js" dir="${project.laraveldir}">
