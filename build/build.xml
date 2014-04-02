@@ -423,7 +423,7 @@ Uses [phpDocumentor](http://www.phpdoc.org/) to generate documentation -->
         
         <fileset id="laravel.model.php" dir="${project.laraveldir}">
             <patternset>
-                <include name="app/models/**/*.php" />
+                <include name="app/models/DeepSea/*.php" />
             </patternset>
         </fileset>
 
