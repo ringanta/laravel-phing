@@ -60,7 +60,7 @@ Uses [PHPMD](http://phpmd.org/) to detect code mess and look for potential probl
     <target name="phpmd"
             description="Generate pmd.xml using PHPMD"
             depends="init">
-        <phpmd rulesets="codesize,naming,design">
+        <phpmd rulesets="${pmd.rulesets}">
             <fileset refid="src.php" />
             <formatter type="xml" outfile="${project.logdir}/${pmd.outfile}" />
         </phpmd>
