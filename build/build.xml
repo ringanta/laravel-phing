@@ -57,7 +57,7 @@ Uses [PHPMD](http://phpmd.org/) to detect code mess and look for potential probl
     <target name="phpmd"
             description="Generate pmd.xml using PHPMD"
             depends="init">
-        <phpmd rulesets="${pmd.rulesets}">
+        <phpmd rulesets="${project.builddir}/${pmd.rulesets}">
             <fileset refid="src.php" />
             <formatter type="xml" outfile="${project.logdir}/${pmd.outfile}" />
         </phpmd>
@@ -94,7 +94,7 @@ Measures the size of the project using [phploc](https://github.com/sebastianberg
     <target name="phpcs"
             description="Generate checkstyle.xml using PHP_CodeSniffer"
             depends="init">
-        <phpcodesniffer standard="${phpcs.standard}"
+        <phpcodesniffer standard="${project.builddir}/${phpcs.standard}"
                         showSniffs="true"
                         showWarnings="true">
             <fileset refid="src.php" />
