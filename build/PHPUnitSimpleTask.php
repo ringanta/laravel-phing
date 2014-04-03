@@ -66,25 +66,29 @@ class PHPUnitSimpleTask extends Task {
     }
 
     public function main() {
-        $this->init();
-        $cmd="phpunit -c $this->template";
-        
-        $junitFlag = trim($this->junitlog);
-        if (! empty($junitFlag)){
-            $cmd .= " --log-junit $junitFlag";
+        if (!empty($this->phplist)){
+            $this->init();
+            $cmd="phpunit -c $this->template";
+            
+            $junitFlag = trim($this->junitlog);
+            if (! empty($junitFlag)){
+                $cmd .= " --log-junit $junitFlag";
+            }
+    
+            $cloverFlag = trim($this->cloverlog);
+            if (! empty($cloverFlag)){
+                $cmd .= " --coverage-clover $cloverFlag";
+            }
+    
+            $backup = $this->phpunit . ".orig";
+            $copy = copy($this->template, $backup);
+            $copy = copy($this->phpunit, $this->template);
+            $phpunit = shell_exec($cmd);
+            copy($backup, $this->template);
+            unlink($backup);
+        } else {
+            echo "Could not find file: $this->phplist";
         }
-
-        $cloverFlag = trim($this->cloverlog);
-        if (! empty($cloverFlag)){
-            $cmd .= " --coverage-clover $cloverFlag";
-        }
-
-        $backup = $this->phpunit . ".orig";
-        $copy = copy($this->template, $backup);
-        $copy = copy($this->phpunit, $this->template);
-        $phpunit = shell_exec($cmd);
-        copy($backup, $this->template);
-        unlink($backup);
     }
 }
 
