@@ -5,16 +5,13 @@
     <taskdef name="phpunitlaravel" classname="PHPUnitSimpleTask" />
 
     <target name="build" depends="init,
-                                  clean,
                                   verify,
                                   analyze" />
 
     <target name="verify" depends="init,
-                                   clean,
                                    lint-php" />
 
     <target name="analyze" depends="init,
-                                    clean,
                                     phpunit,
                                     jshint,
                                     csslint,
@@ -60,7 +57,7 @@ Uses [PHPMD](http://phpmd.org/) to detect code mess and look for potential probl
     <target name="phpmd"
             description="Generate pmd.xml using PHPMD"
             depends="init">
-        <phpmd rulesets="codesize,naming,design">
+        <phpmd rulesets="${project.builddir}/${pmd.rulesets}">
             <fileset refid="src.php" />
             <formatter type="xml" outfile="${project.logdir}/${pmd.outfile}" />
         </phpmd>
@@ -97,7 +94,7 @@ Measures the size of the project using [phploc](https://github.com/sebastianberg
     <target name="phpcs"
             description="Generate checkstyle.xml using PHP_CodeSniffer"
             depends="init">
-        <phpcodesniffer standard="${phpcs.standard}"
+        <phpcodesniffer standard="${project.builddir}/${phpcs.standard}"
                         showSniffs="true"
                         showWarnings="true">
             <fileset refid="src.php" />
@@ -257,25 +254,10 @@ Generate a code browser for PHP files with syntax highlighting and colored error
     </target>
 
 
-<!-- ### Generate documentation
-Uses [phpDocumentor](http://www.phpdoc.org/) to generate documentation -->
-    <target name="phpdoc"
-            description="Generate API documentation using phpDocumentor">
-        <mkdir dir="${project.builddir}/api" />
-        <phpdoc title="API Documentation"
-                destdir="${project.builddir}/api"
-                sourcecode="php"
-                output="HTML:Smarty:PHP">
-            <fileset refid="src.php" />
-        </phpdoc>
-    </target>
-
-
 <!-- ### Internal setup -->
     <target name="init"
-            depends="load-properties, setup-dirs, setup-filesets"
+            depends="clean,setup-dirs,setup-filesets"
             unless="project.initialized">
-        <echo msg="call init!" />
         <property name="project.initialized" value="true" />
     </target>
 
@@ -423,7 +405,7 @@ Uses [phpDocumentor](http://www.phpdoc.org/) to generate documentation -->
         
         <fileset id="laravel.model.php" dir="${project.laraveldir}">
             <patternset>
-                <include name="app/models/**/*.php" />
+                <include name="app/models/DeepSea/*.php" />
             </patternset>
         </fileset>
 
