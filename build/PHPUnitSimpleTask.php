@@ -6,6 +6,7 @@ class PHPUnitSimpleTask extends Task {
 
     private $bootstrap = "";
     private $junitlog = "";
+    private $htmlllog = "";
     private $cloverlog = "";
     private $template;
     private $phpunit;
@@ -26,6 +27,10 @@ class PHPUnitSimpleTask extends Task {
 
     public function setCloverlog($out){
         $this->cloverlog = $out;
+    }
+
+    public function setHtmllog($out){
+        $this->htmllog = $out;
     }
 
     public function setTemplate($source){
@@ -78,6 +83,11 @@ class PHPUnitSimpleTask extends Task {
             $cloverFlag = trim($this->cloverlog);
             if (! empty($cloverFlag)){
                 $cmd .= " --coverage-clover $cloverFlag";
+            }
+
+            $htmlFlag = trim($this->htmllog);
+            if (! empty($htmlFlag)){
+                $cmd .= " --coverage-html $htmlFlag";
             }
     
             $backup = $this->phpunit . ".orig";
