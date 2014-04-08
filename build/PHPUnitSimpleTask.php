@@ -54,7 +54,7 @@ class PHPUnitSimpleTask extends Task {
                 if ($filter[0]->whitelist){
                     $whitelist = $filter[0]->whitelist;
                 } else {
-                    $whitelist = $filter->addChild(self::XPATH_FILTER);
+                    $whitelist = $filter->addChild(self::XPATH_WHITELIST);
                 }
             } else {
                 $filter = $phpunit->addChild(self::XPATH_FILTER);

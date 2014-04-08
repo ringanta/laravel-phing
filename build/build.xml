@@ -179,14 +179,6 @@ This belongs on developer env - not VCS. This goes for mentioning them in commen
         </foreach>
     </target>
 
-    <target name="list-php" depends="init">
-        <property name="fileset-dump-file" value="${project.logdir}/${phplist.outfile}" override="true" />
-        <delete file="${fileset-dump-file}" />
-         <foreach target="write-to-file" param="filename" absparam="absfilename">
-            <fileset refid="src.php" />
-        </foreach>
-    </target>
-    
     <target name="list-laravel-models" depends="init">
         <property name="fileset-dump-file" value="${project.logdir}/${phplist.modelsoutfile}" override="true" />
         <delete file="${fileset-dump-file}" />
@@ -203,14 +195,6 @@ This belongs on developer env - not VCS. This goes for mentioning them in commen
         </foreach>
     </target>
 
-    <target name="list-js" depends="init">
-        <property name="fileset-dump-file" value="${project.logdir}/${jslist.outfile}" override="true" />
-        <delete file="${fileset-dump-file}" />
-        <foreach target="write-to-file" param="filename" absparam="absfilename">
-            <fileset refid="src.js" />
-        </foreach>
-    </target>
-
     <target name="list-css" depends="init">
         <property name="fileset-dump-file" value="${project.logdir}/${csslist.outfile}" override="true" />
         <delete file="${fileset-dump-file}" />
@@ -219,18 +203,6 @@ This belongs on developer env - not VCS. This goes for mentioning them in commen
         </foreach>
     </target>
 
-    <target name="list-css" depends="init">
-        <property name="fileset-dump-file" value="${project.logdir}/${csslist.outfile}" override="true" />
-        <delete file="${fileset-dump-file}" />
-        <foreach target="write-to-file" param="filename" absparam="absfilename">
-            <fileset refid="src.css" />
-        </foreach>
-    </target>
-
-    <target name="write-to-file">
-        <echo file="${fileset-dump-file}" append="true">"${absfilename}" </echo>
-    </target>
-    
     <target name="write-to-file">
         <echo file="${fileset-dump-file}" append="true">${absfilename}${line.separator}</echo>
     </target>
